@@ -92,14 +92,44 @@ export async function createBook(
   }
 }
 
-export function updateBook(
+export async function updateBook(
   req: Request,
   res: Response
-): void {
-  res.status(501).json({
-    success: false,
-    message: "PATCH /books/:id todavía no implementado",
-  });
+): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const updatedBook = await Book.findByIdAndUpdate(
+      id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedBook) {
+      res.status(404).json({
+        success: false,
+        message: "Libro no encontrado.",
+      });
+
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Libro actualizado correctamente.",
+      data: updatedBook,
+    });
+  } catch (error) {
+    console.error("Error al actualizar el libro:", error);
+
+    res.status(400).json({
+      success: false,
+      message: "No se pudo actualizar el libro.",
+    });
+  }
 }
 
 export function deleteBook(
