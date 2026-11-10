@@ -132,12 +132,35 @@ export async function updateBook(
   }
 }
 
-export function deleteBook(
+export async function deleteBook(
   req: Request,
   res: Response
-): void {
-  res.status(501).json({
-    success: false,
-    message: "DELETE /books/:id todavía no implementado",
-  });
+): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const deletedBook = await Book.findByIdAndDelete(id);
+
+    if (!deletedBook) {
+      res.status(404).json({
+        success: false,
+        message: "Libro no encontrado.",
+      });
+
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Libro eliminado correctamente.",
+      data: deletedBook,
+    });
+  } catch (error) {
+    console.error("Error al eliminar el libro:", error);
+
+    res.status(400).json({
+      success: false,
+      message: "No se pudo eliminar el libro.",
+    });
+  }
 }
