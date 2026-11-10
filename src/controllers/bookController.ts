@@ -23,14 +23,37 @@ export async function getBooks(
   }
 }
 
-export function getBookById(
+export async function getBookById(
   req: Request,
   res: Response
-): void {
-  res.status(501).json({
-    success: false,
-    message: "GET /books/:id todavía no implementado",
-  });
+): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    const book = await Book.findById(id);
+
+    if (!book) {
+      res.status(404).json({
+        success: false,
+        message: "Libro no encontrado.",
+      });
+
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Libro obtenido correctamente.",
+      data: book,
+    });
+  } catch (error) {
+    console.error("Error al obtener el libro:", error);
+
+    res.status(400).json({
+      success: false,
+      message: "ID de libro inválido.",
+    });
+  }
 }
 
 export async function createBook(
