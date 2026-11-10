@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Book } from "../models/Book";
+import { sendError, sendSuccess } from "../utils/response";
 
 export async function getBooks(
   req: Request,
@@ -8,18 +10,20 @@ export async function getBooks(
   try {
     const books = await Book.find();
 
-    res.status(200).json({
-      success: true,
-      message: "Libros obtenidos correctamente.",
-      data: books,
-    });
+    sendSuccess(
+      res,
+      200,
+      "Libros obtenidos correctamente.",
+      books
+    );
   } catch (error) {
     console.error("Error al obtener los libros:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Error interno del servidor.",
-    });
+    sendError(
+      res,
+      500,
+      "Error interno del servidor."
+    );
   }
 }
 
@@ -30,29 +34,32 @@ export async function getBookById(
   try {
     const { id } = req.params;
 
-    const book = await Book.findById(id);
-
-    if (!book) {
-      res.status(404).json({
-        success: false,
-        message: "Libro no encontrado.",
-      });
-
+    if (!mongoose.isValidObjectId(id)) {
+      sendError(res, 400, "ID de libro inválido.");
       return;
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Libro obtenido correctamente.",
-      data: book,
-    });
+    const book = await Book.findById(id);
+
+    if (!book) {
+      sendError(res, 404, "Libro no encontrado.");
+      return;
+    }
+
+    sendSuccess(
+      res,
+      200,
+      "Libro obtenido correctamente.",
+      book
+    );
   } catch (error) {
     console.error("Error al obtener el libro:", error);
 
-    res.status(400).json({
-      success: false,
-      message: "ID de libro inválido.",
-    });
+    sendError(
+      res,
+      500,
+      "Error interno del servidor."
+    );
   }
 }
 
@@ -77,18 +84,43 @@ export async function createBook(
       available,
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Libro creado correctamente.",
-      data: newBook,
-    });
-  } catch (error) {
+    sendSuccess(
+      res,
+      201,
+      "Libro creado correctamente.",
+      newBook
+    );
+  } catch (error: unknown) {
     console.error("Error al crear el libro:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Error interno del servidor.",
-    });
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
+      sendError(
+        res,
+        409,
+        "Ya existe un libro con ese título."
+      );
+      return;
+    }
+
+    if (error instanceof mongoose.Error.ValidationError) {
+      sendError(
+        res,
+        400,
+        "Los datos enviados no son válidos."
+      );
+      return;
+    }
+
+    sendError(
+      res,
+      500,
+      "Error interno del servidor."
+    );
   }
 }
 
@@ -98,6 +130,11 @@ export async function updateBook(
 ): Promise<void> {
   try {
     const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      sendError(res, 400, "ID de libro inválido.");
+      return;
+    }
 
     const updatedBook = await Book.findByIdAndUpdate(
       id,
@@ -109,26 +146,47 @@ export async function updateBook(
     );
 
     if (!updatedBook) {
-      res.status(404).json({
-        success: false,
-        message: "Libro no encontrado.",
-      });
-
+      sendError(res, 404, "Libro no encontrado.");
       return;
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Libro actualizado correctamente.",
-      data: updatedBook,
-    });
-  } catch (error) {
+    sendSuccess(
+      res,
+      200,
+      "Libro actualizado correctamente.",
+      updatedBook
+    );
+  } catch (error: unknown) {
     console.error("Error al actualizar el libro:", error);
 
-    res.status(400).json({
-      success: false,
-      message: "No se pudo actualizar el libro.",
-    });
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
+      sendError(
+        res,
+        409,
+        "Ya existe un libro con ese título."
+      );
+      return;
+    }
+
+    if (error instanceof mongoose.Error.ValidationError) {
+      sendError(
+        res,
+        400,
+        "Los datos enviados no son válidos."
+      );
+      return;
+    }
+
+    sendError(
+      res,
+      500,
+      "Error interno del servidor."
+    );
   }
 }
 
@@ -139,28 +197,31 @@ export async function deleteBook(
   try {
     const { id } = req.params;
 
-    const deletedBook = await Book.findByIdAndDelete(id);
-
-    if (!deletedBook) {
-      res.status(404).json({
-        success: false,
-        message: "Libro no encontrado.",
-      });
-
+    if (!mongoose.isValidObjectId(id)) {
+      sendError(res, 400, "ID de libro inválido.");
       return;
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Libro eliminado correctamente.",
-      data: deletedBook,
-    });
+    const deletedBook = await Book.findByIdAndDelete(id);
+
+    if (!deletedBook) {
+      sendError(res, 404, "Libro no encontrado.");
+      return;
+    }
+
+    sendSuccess(
+      res,
+      200,
+      "Libro eliminado correctamente.",
+      deletedBook
+    );
   } catch (error) {
     console.error("Error al eliminar el libro:", error);
 
-    res.status(400).json({
-      success: false,
-      message: "No se pudo eliminar el libro.",
-    });
+    sendError(
+      res,
+      500,
+      "Error interno del servidor."
+    );
   }
 }
